@@ -96,8 +96,11 @@ describe('BrowserSelectionController', () => {
       url: 'https://example.com',
     });
     expect(indicatorEl.style.display).toBe('block');
-    expect(indicatorEl.textContent).toContain('chars selected');
-    expect(indicatorEl.textContent).toContain('source=browser:https://example.com');
+    expect(indicatorEl.textContent).toContain('Web selection');
+    expect(indicatorEl.textContent).toContain('chars');
+    expect(indicatorEl.textContent).toContain('example.com');
+    expect(indicatorEl.textContent).not.toContain('source=');
+    expect(indicatorEl.getAttribute('title')).toContain('source=browser:https://example.com');
   });
 
   it('clears selection when text is deselected and input is not focused', async () => {

@@ -266,9 +266,12 @@ export class BrowserSelectionController {
     if (this.storedSelection) {
       const charCount = this.storedSelection.selectedText.length;
       const charLabel = charCount === 1 ? 'char' : 'chars';
-      const metadata = `source=${this.storedSelection.source}`;
-      this.indicatorEl.textContent = `${charCount} ${charLabel} selected - ${metadata}`;
-      this.indicatorEl.setAttribute('title', this.buildIndicatorTitle(metadata));
+      const displaySource = this.buildDisplaySource(this.storedSelection);
+      const summary = displaySource
+        ? `Web selection | ${charCount} ${charLabel} | ${displaySource}`
+        : `Web selection | ${charCount} ${charLabel}`;
+      this.indicatorEl.textContent = summary;
+      this.indicatorEl.setAttribute('title', this.buildIndicatorTitle());
       this.indicatorEl.style.display = 'block';
     } else {
       this.indicatorEl.style.display = 'none';
@@ -278,8 +281,37 @@ export class BrowserSelectionController {
     this.updateContextRowVisibility();
   }
 
-  private buildIndicatorTitle(metadata: string): string {
-    const lines = [metadata];
+  private buildDisplaySource(context: BrowserSelectionContext): string | null {
+    const domain = this.extractDomain(context.url);
+    if (domain) return domain;
+    if (context.title?.trim()) return this.truncateLabel(context.title.trim(), 40);
+
+    const rawSource = context.source.trim();
+    if (!rawSource) return null;
+    const normalized = rawSource.startsWith('browser:') ? rawSource.slice('browser:'.length) : rawSource;
+    if (!normalized) return null;
+    return this.truncateLabel(normalized, 40);
+  }
+
+  private extractDomain(url?: string): string | null {
+    if (!url?.trim()) return null;
+    try {
+      const parsed = new URL(url.trim());
+      return parsed.hostname.replace(/^www\./, '') || null;
+    } catch {
+      return null;
+    }
+  }
+
+  private truncateLabel(label: string, maxLength: number): string {
+    if (label.length <= maxLength) return label;
+    return `${label.slice(0, Math.max(0, maxLength - 3))}...`;
+  }
+
+  private buildIndicatorTitle(): string {
+    if (!this.storedSelection) return '';
+
+    const lines = [`source=${this.storedSelection.source}`];
     if (this.storedSelection?.title?.trim()) {
       lines.push(`title=${this.storedSelection.title.trim()}`);
     }
