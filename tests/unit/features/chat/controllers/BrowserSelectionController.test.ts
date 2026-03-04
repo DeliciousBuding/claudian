@@ -96,11 +96,12 @@ describe('BrowserSelectionController', () => {
       url: 'https://example.com',
     });
     expect(indicatorEl.style.display).toBe('block');
-    expect(indicatorEl.textContent).toContain('Web selection');
-    expect(indicatorEl.textContent).toContain('chars');
-    expect(indicatorEl.textContent).toContain('example.com');
+    expect(indicatorEl.textContent).toBe('Web selected');
     expect(indicatorEl.textContent).not.toContain('source=');
+    expect(indicatorEl.getAttribute('title')).toContain('chars selected');
     expect(indicatorEl.getAttribute('title')).toContain('source=browser:https://example.com');
+    expect(indicatorEl.getAttribute('title')).toContain('title=Surfing');
+    expect(indicatorEl.getAttribute('title')).toContain('https://example.com');
   });
 
   it('clears selection when text is deselected and input is not focused', async () => {
@@ -144,7 +145,6 @@ describe('BrowserSelectionController', () => {
   });
 
   it('handles polling errors without unhandled rejection', async () => {
-    const pollSpy = jest.spyOn(console, 'debug').mockImplementation(() => {});
     const extractSpy = jest.spyOn(controller as any, 'extractSelectedText')
       .mockRejectedValueOnce(new Error('poll failed'));
 
@@ -153,8 +153,6 @@ describe('BrowserSelectionController', () => {
     await flushMicrotasks();
 
     expect(extractSpy).toHaveBeenCalled();
-    expect(pollSpy).toHaveBeenCalled();
-
-    pollSpy.mockRestore();
+    expect(controller.hasSelection()).toBe(false);
   });
 });

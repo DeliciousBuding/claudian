@@ -4,7 +4,6 @@ import type { BrowserSelectionContext } from '../../../utils/browser';
 import { updateContextRowHasContent } from './contextRowVisibility';
 
 const BROWSER_SELECTION_POLL_INTERVAL = 250;
-const BROWSER_SELECTION_LOG_PREFIX = '[Claudian][BrowserSelection]';
 
 type BrowserLikeWebview = HTMLElement & {
   executeJavaScript?: (code: string, userGesture?: boolean) => Promise<unknown>;
@@ -69,8 +68,8 @@ export class BrowserSelectionController {
       } else {
         this.clearWhenInputIsNotFocused();
       }
-    } catch (error) {
-      this.debugLog('Polling failed', error);
+    } catch {
+      // Ignore transient polling errors to keep selection tracking resilient.
     } finally {
       this.pollInFlight = false;
     }
@@ -151,8 +150,8 @@ export class BrowserSelectionController {
 
         const frameSelection = this.extractSelectionFromDocument(frameDoc, frameDoc.body);
         if (frameSelection) return frameSelection;
-      } catch (error) {
-        this.debugLog('Failed to read iframe selection', error);
+      } catch {
+        // Ignore inaccessible iframe contexts (cross-origin restrictions).
       }
     }
     return null;
@@ -170,8 +169,8 @@ export class BrowserSelectionController {
         if (typeof result === 'string' && result.trim()) {
           return result.trim();
         }
-      } catch (error) {
-        this.debugLog('Failed to read webview selection', error);
+      } catch {
+        // Ignore inaccessible webview contexts.
       }
     }
     return null;
@@ -264,13 +263,7 @@ export class BrowserSelectionController {
     if (!this.indicatorEl) return;
 
     if (this.storedSelection) {
-      const charCount = this.storedSelection.selectedText.length;
-      const charLabel = charCount === 1 ? 'char' : 'chars';
-      const displaySource = this.buildDisplaySource(this.storedSelection);
-      const summary = displaySource
-        ? `Web selection | ${charCount} ${charLabel} | ${displaySource}`
-        : `Web selection | ${charCount} ${charLabel}`;
-      this.indicatorEl.textContent = summary;
+      this.indicatorEl.textContent = 'Web selected';
       this.indicatorEl.setAttribute('title', this.buildIndicatorTitle());
       this.indicatorEl.style.display = 'block';
     } else {
@@ -281,56 +274,19 @@ export class BrowserSelectionController {
     this.updateContextRowVisibility();
   }
 
-  private buildDisplaySource(context: BrowserSelectionContext): string | null {
-    const domain = this.extractDomain(context.url);
-    if (domain) return domain;
-    if (context.title?.trim()) return this.truncateLabel(context.title.trim(), 40);
-
-    const rawSource = context.source.trim();
-    if (!rawSource) return null;
-    const normalized = rawSource.startsWith('browser:') ? rawSource.slice('browser:'.length) : rawSource;
-    if (!normalized) return null;
-    return this.truncateLabel(normalized, 40);
-  }
-
-  private extractDomain(url?: string): string | null {
-    if (!url?.trim()) return null;
-    try {
-      const parsed = new URL(url.trim());
-      return parsed.hostname.replace(/^www\./, '') || null;
-    } catch {
-      return null;
-    }
-  }
-
-  private truncateLabel(label: string, maxLength: number): string {
-    if (label.length <= maxLength) return label;
-    return `${label.slice(0, Math.max(0, maxLength - 3))}...`;
-  }
-
   private buildIndicatorTitle(): string {
     if (!this.storedSelection) return '';
 
-    const lines = [`source=${this.storedSelection.source}`];
-    if (this.storedSelection?.title?.trim()) {
+    const charCount = this.storedSelection.selectedText.length;
+    const charLabel = charCount === 1 ? 'char' : 'chars';
+    const lines = [`${charCount} ${charLabel} selected`, `source=${this.storedSelection.source}`];
+    if (this.storedSelection.title?.trim()) {
       lines.push(`title=${this.storedSelection.title.trim()}`);
     }
-    if (this.storedSelection?.url?.trim()) {
+    if (this.storedSelection.url?.trim()) {
       lines.push(this.storedSelection.url.trim());
     }
     return lines.join('\n');
-  }
-
-  private debugLog(message: string, error?: unknown): void {
-    if (error instanceof Error) {
-      console.debug(`${BROWSER_SELECTION_LOG_PREFIX} ${message}: ${error.message}`);
-      return;
-    }
-    if (error !== undefined) {
-      console.debug(`${BROWSER_SELECTION_LOG_PREFIX} ${message}`, error);
-      return;
-    }
-    console.debug(`${BROWSER_SELECTION_LOG_PREFIX} ${message}`);
   }
 
   updateContextRowVisibility(): void {
