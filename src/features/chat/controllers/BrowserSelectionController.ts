@@ -263,7 +263,9 @@ export class BrowserSelectionController {
     if (!this.indicatorEl) return;
 
     if (this.storedSelection) {
-      this.indicatorEl.textContent = 'Web selected';
+      const lineCount = this.storedSelection.selectedText.split(/\r?\n/).length;
+      const lineLabel = lineCount === 1 ? 'line' : 'lines';
+      this.indicatorEl.textContent = `${lineCount} ${lineLabel} selected`;
       this.indicatorEl.setAttribute('title', this.buildIndicatorTitle());
       this.indicatorEl.style.display = 'block';
     } else {

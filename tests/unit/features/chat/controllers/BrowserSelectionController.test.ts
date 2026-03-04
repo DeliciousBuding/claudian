@@ -96,12 +96,21 @@ describe('BrowserSelectionController', () => {
       url: 'https://example.com',
     });
     expect(indicatorEl.style.display).toBe('block');
-    expect(indicatorEl.textContent).toBe('Web selected');
+    expect(indicatorEl.textContent).toBe('1 line selected');
     expect(indicatorEl.textContent).not.toContain('source=');
     expect(indicatorEl.getAttribute('title')).toContain('chars selected');
     expect(indicatorEl.getAttribute('title')).toContain('source=browser:https://example.com');
     expect(indicatorEl.getAttribute('title')).toContain('title=Surfing');
     expect(indicatorEl.getAttribute('title')).toContain('https://example.com');
+  });
+
+  it('shows line-based indicator text for multi-line browser selection', async () => {
+    selectionText = 'line 1\nline 2';
+    controller.start();
+    jest.advanceTimersByTime(250);
+    await flushMicrotasks();
+
+    expect(indicatorEl.textContent).toBe('2 lines selected');
   });
 
   it('clears selection when text is deselected and input is not focused', async () => {
